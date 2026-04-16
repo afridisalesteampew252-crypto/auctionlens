@@ -119,7 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (!res.ok) {
-                throw new Error(`API Error: ${res.status}`);
+                const errorData = await res.json();
+                throw new Error(errorData.error || `API Error: ${res.status}`);
             }
             
             const data = await res.json();
