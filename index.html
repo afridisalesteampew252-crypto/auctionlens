@@ -5,8 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AuctionLens PK | AI Scanner</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(-100%); opacity: 0; }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-slide-in { animation: slideIn 0.3s ease-out; }
+        .animate-slide-out { animation: slideOut 0.3s ease-out; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    </style>
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen font-sans flex flex-col items-center py-8">
+    
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 left-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 
     <div id="viewScanner" class="w-full max-w-md px-4 flex flex-col items-center gap-6">
         <div class="text-center">
@@ -27,17 +47,22 @@
         </div>
 
         <div class="grid grid-cols-2 gap-3 w-full">
-            <button id="btnCam" class="bg-slate-900 border border-slate-800 py-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-800 transition-all">
+            <button id="btnCam" class="bg-slate-900 border border-slate-800 py-4 rounded-2xl flex flex-col items-center gap-2 hover:bg-slate-800 hover:border-blue-500 transition-all duration-200 group">
+                <svg class="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
                 <span class="text-[10px] font-black uppercase text-blue-500">Camera</span>
             </button>
-            <label class="bg-slate-900 border border-slate-800 py-4 rounded-2xl flex flex-col items-center gap-2 cursor-pointer hover:bg-slate-800 transition-all text-center">
+            <label class="bg-slate-900 border border-slate-800 py-4 rounded-2xl flex flex-col items-center gap-2 cursor-pointer hover:bg-slate-800 hover:border-blue-500 transition-all duration-200 group">
                 <input type="file" id="fileIn" class="hidden" accept="image/*">
+                <svg class="w-5 h-5 text-blue-500 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 <span class="text-[10px] font-black uppercase text-blue-500">Gallery</span>
             </label>
         </div>
+        
+        <!-- Help Text -->
+        <p class="text-[9px] text-slate-500 text-center italic">📸 Capture a clear, well-lit auction sheet for best results</p>
 
-        <button id="shutter" class="hidden w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest shadow-xl">Capture Sheet</button>
-        <button id="analyze" class="hidden w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest shadow-lg shadow-blue-900/40">Process Sheet</button>
+        <button id="shutter" class="hidden w-full bg-white text-black font-black py-5 rounded-2xl uppercase tracking-widest shadow-xl hover:bg-slate-100 active:scale-95 transition-all">📸 Capture Sheet</button>
+        <button id="analyze" class="hidden w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest shadow-lg shadow-blue-900/40 hover:bg-blue-700 active:scale-95 transition-all">⚡ Process Sheet</button>
 
         <div id="result" class="hidden w-full bg-slate-900 rounded-3xl border border-slate-800 p-6 space-y-6 mb-28">
             <div id="verdictBox" class="p-4 rounded-xl border-2 text-center bg-slate-950">
@@ -45,15 +70,15 @@
             </div>
 
             <div class="grid grid-cols-3 gap-2">
-                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center hover:border-blue-500 transition-colors">
                     <p class="text-[8px] text-slate-500 uppercase font-bold">Year</p>
                     <p id="resYear" class="text-sm font-black text-white">-</p>
                 </div>
-                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center hover:border-blue-500 transition-colors">
                     <p class="text-[8px] text-slate-500 uppercase font-bold">Grade</p>
                     <p id="resGrade" class="text-sm font-black text-white">-</p>
                 </div>
-                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center hover:border-blue-500 transition-colors">
                     <p class="text-[8px] text-slate-500 uppercase font-bold">Interior</p>
                     <p id="resInterior" class="text-sm font-black text-white">-</p>
                 </div>
@@ -62,16 +87,21 @@
             <div class="space-y-4">
                 <div>
                     <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Chassis Number</p>
-                    <p id="resChassis" class="text-white font-bold bg-slate-950 p-2 rounded-lg border border-slate-800">-</p>
+                    <button id="resChassis" class="w-full text-white font-bold bg-slate-950 p-2 rounded-lg border border-slate-800 hover:border-blue-500 active:scale-95 transition-all text-left cursor-pointer">-</button>
+                    <p class="text-[8px] text-slate-600 mt-1">👆 Click to copy</p>
                 </div>
                 <div>
                     <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">AI Summary</p>
-                    <p id="resSummary" class="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-800">-</p>
+                    <div id="resSummary" class="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-800 min-h-24"></div>
+                </div>
+                <div>
+                    <p class="text-[9px] text-slate-500 uppercase font-bold mb-1">Exterior Condition</p>
+                    <div id="resExterior" class="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-800 min-h-16"></div>
                 </div>
             </div>
 
-            <button id="whatsappBtn" class="w-full bg-[#25D366] text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs flex items-center justify-center gap-2">
-                Get Expert Opinion
+            <button id="whatsappBtn" class="w-full bg-[#25D366] text-white font-black py-4 rounded-xl uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:bg-[#1ebd5a] active:scale-95 transition-all">
+                💬 Get Expert Opinion
             </button>
         </div>
     </div>
@@ -108,6 +138,6 @@
         import { inject } from '@vercel/analytics';
         inject();
     </script>
-    <script src="chat.js"></script>
+    <script type="module" src="chat.js"></script>
 </body>
 </html>
