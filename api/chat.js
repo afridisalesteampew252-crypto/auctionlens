@@ -13,26 +13,35 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: "No image provided" });
         }
 
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
             headers: { 
-                "Authorization": `Bearer ${process.env.GROQ_API_KEY}`, 
+                "x-api-key": process.env.GROQ_API_KEY,
+                "anthropic-version": "2023-06-01",
                 "Content-Type": "application/json" 
             },
             body: JSON.stringify({
-                model: "llama-2-90b-vision", 
+                model: "claude-3-5-sonnet-20241022",
+                max_tokens: 1024,
                 messages: [
                     {
-                        role: "system",
-                        content: "You are an Auction Expert. Extract data precisely. FORMAT: YEAR: [val], GRADE: [val], CHASSIS: [val], SUMMARY: [1 concise paragraph], INTERIOR: [1 concise paragraph], EXTERIOR: [1 concise paragraph], VERDICT: [BUY, CAUTION, or AVOID with 1 reason]."
-                    },
-                    {
                         role: "user",
-                        content: [{ type: "text", text: "Analyze the uploaded auction sheet. Be concise." }, { type: "image_url", image_url: { url: `data:${mimeType};base64,${image}` } }]
+                        content: [
+                            {
+                                type: "image",
+                                source: {
+                                    type: "base64",
+                                    media_type: mimeType || "image/jpeg",
+                                    data: image
+                                }
+                            },
+                            {
+                                type: "text",
+                                text: "You are an Auction Expert. Analyze this Japanese auction sheet image and extract data precisely.\n\nProvide response in this exact FORMAT:\n\nYEAR: [vehicle year]\nGRADE: [auction grade like 4.5, 4, R, etc]\nCHASSIS: [chassis number]\nSUMMARY: [1 concise paragraph about overall condition]\nINTERIOR: [1 concise paragraph about interior condition]\nEXTERIOR: [1 concise paragraph about exterior condition]\nVERDICT: [BUY, CAUTION, or AVOID with 1 reason]"
+                            }
+                        ]
                     }
-                ],
-                temperature: 0.1,
-                max_tokens: 600
+                ]
             })
         });
         
@@ -42,7 +51,8 @@ export default async function handler(req, res) {
             return res.status(response.status).json({ error: data.error?.message || "API error" });
         }
         
-        res.status(200).json({ result: data.choices[0].message.content });
+        const result = data.content[0].text;
+        res.status(200).json({ result: result });
     } catch (e) { 
         res.status(500).json({ error: `Server error: ${e.message}` }); 
     }
